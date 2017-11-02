@@ -1,8 +1,6 @@
 
 *.csv
 
-*.txt
-
 \.idea/
 
 \.ipynb_checkpoints/
