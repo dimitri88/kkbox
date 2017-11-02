@@ -4,3 +4,7 @@
 *.txt
 
 \.idea/
+
+\.ipynb_checkpoints/
+
+*.ipynb
