@@ -7,13 +7,13 @@ Read train.csv file and convert it into a feature vector
 def getFeatureVecotrs(path,fileName):
     train_data = pd.read_csv(path + fileName)
     # extract categorical data and construct a one hot encoder using pandas dummy function
-    train_category_data = train_data[['source_system_tab','source_screen_name','source_type']]
+    train_category_data = train_data[['source_system_tab', 'source_type']]
     train_category_data = pd.get_dummies(train_category_data)
     #combine IDs with one hot encoded data
-    train_data = pd.concat([train_data[['msno','song_id']], train_category_data ], axis=1)
-    # write train_data to csv file
-    print('Writing train_feature_vector.csv ')
-    train_data.to_csv('./train_feature_vector.csv', mode='w+')
+    train_data = pd.concat([train_data[['msno', 'song_id']], train_category_data], axis=1)
+    # # write train_data to csv file
+    # print('Writing train_feature_vector.csv ')
+    # train_data.to_csv('./train_feature_vector.csv', mode='w+')
 
     '''
     Read members.csv file and convert it into a feature vector
@@ -22,7 +22,7 @@ def getFeatureVecotrs(path,fileName):
     '''
 
     # read members.csv
-    member_data = train_data = pd.read_csv(path+'members.csv')
+    member_data = pd.read_csv(path+'members.csv')
     # convert date date into pandas date format
     member_data['registration_init_time'] = pd.to_datetime(member_data['registration_init_time'], format='%Y%m%d')
     member_data['expiration_date'] = pd.to_datetime(member_data['expiration_date'], format='%Y%m%d')
@@ -40,8 +40,8 @@ def getFeatureVecotrs(path,fileName):
     member_category_data = pd.get_dummies(member_data[['city', 'registered_via']])
 
     member_data = pd.concat([member_data['msno'], member_category_data, member_data['length']], axis=1)
-    print('Writing member.csv')
-    member_data.to_csv('./member_feature_vector.csv', mode='w+')
+    # print('Writing member.csv')
+    # member_data.to_csv('./member_feature_vector.csv', mode='w+')
 
     song_col = pd.read_csv('../data/songs.csv')
     song_id_mat = song_col['song_id']
@@ -58,6 +58,12 @@ def getFeatureVecotrs(path,fileName):
     song_category = song_col[['language']]
     song_category = song_category.applymap(str)
     song_cat_mat = pd.get_dummies(song_category)
-
-    songs_all_frame = pd.concat([song_id_mat, len_norm, genre_id_norm, song_cat_mat], axis=1)
-    songs_all_frame.to_csv('test.csv', index=False)
+    #Linzuo: commented genre_id
+    #songs_all_frame = pd.concat([song_id_mat, len_norm, genre_id_norm, song_cat_mat], axis=1)
+    songs_all_frame = pd.concat([song_id_mat, len_norm, song_cat_mat], axis=1)
+    # songs_all_frame.to_csv('test.csv', index=False)
+    train_data = pd.merge(train_data, member_data, on='msno')
+    train_data = pd.merge(train_data, songs_all_frame, on='song_id')
+    train_data.fillna(0)
+    res = train_data.drop(['msno', 'song_id'], axis=1)
+    return res.as_matrix()

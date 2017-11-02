@@ -1,7 +1,8 @@
 import pandas as pd
-from sklearn import linear_model, tree, svm
+from sklearn import linear_model,tree
 from sklearn.model_selection import KFold
 from sklearn.metrics import f1_score
+from sklearn.ensemble import RandomForestClassifier
 from features import getFeatureVecotrs
 
 
@@ -9,13 +10,14 @@ def main():
     print('##############Create feature vectors based on training data##############')
     #cross validation to findout best machine learning algorithm
     train_data = pd.read_csv('../data/train.csv')
-    x = getFeatureVecotrs('../data/', 'train.csv');
+    x = getFeatureVecotrs('../data/', 'train.csv')
     y = train_data['target'].as_matrix()
     kf = KFold(n_splits=5)
 
-    f1_linear_reg = [];
-    f1_svm = [];
-    f1_sgd = [];
+    f1_linear_reg = []
+    f1_rf = []
+    f1_sgd = []
+    f1_tree = []
     print('##############Starting cross validation##############')
     for train_index, test_index in kf.split(x):
         x_train, x_test = x[train_index], x[test_index]
@@ -24,24 +26,40 @@ def main():
         reg = linear_model.LinearRegression()
         reg.fit(x_train, y_train)
         y_res = reg.predict(x_test)
-        f1_linear_reg.append(computeF1(y_test, y_res, 'Linear Regression'))
-        print('##############Training with Support Vector Machine##############')
-        svm_clf = svm.SVC()
-        svm_clf.fit(x_train, y_train)
-        y_res = svm_clf.predict(x_test)
-        f1_svm.append(computeF1(y_test, y_res, 'Support Vector Machine'))
+        f1_linear_reg.append(compute_f1(y_test, (y_res > 0.5).astype(int), 'Linear Regression'))
+        print('##############Training with Random Forest##############')
+        rf_clf = RandomForestClassifier(max_depth=2, random_state=0)
+        rf_clf.fit(x_train, y_train)
+        y_res = rf_clf.predict(x_test)
+        f1_rf.append(compute_f1(y_test, (y_res > 0.5).astype(int), 'Random Forest'))
+
+        print('##############Training with Decision Tree ##############')
+        tree_clf = tree.DecisionTreeClassifier()
+        tree_clf.fit(x_train, y_train)
+        y_res = tree_clf.predict(x_test)
+        f1_tree.append(compute_f1(y_test, y_res, 'Decision Tree'))
+
         print('##############Training with SGD ##############')
         sgd_clf = linear_model.SGDClassifier(loss="hinge", penalty="l2")
         sgd_clf.fit(x_train, y_train)
-        y_res = svm_clf.predict(x_test)
-        f1_sgd.append(computeF1(y_test, y_res, 'Stochastic Gradient Descent'))
+        y_res = sgd_clf.predict(x_test)
+        f1_sgd.append(compute_f1(y_test, (y_res > 0.5).astype(int), 'Stochastic Gradient Descent'))
 
+    avg_linear = sum(f1_linear_reg)/5.0
+    avg_rf = sum(f1_rf)/5.0
+    avg_sgd = sum(f1_sgd)/5.0
+    avg_tree = sum(f1_tree)/5.0
+    print('The average f1 score for linear regression is : %f' % avg_linear)
+    print('The average f1 score for random forest is : %f' % avg_rf)
+    print('The average f1 score for sgd is : %f' % avg_sgd)
+    print('The average f1 score for decision tree is : %f' % avg_tree)
 
-def computeF1(y_test, y_res, model_name):
+def compute_f1(y_test, y_res, model_name):
     print('The f1 score for' + model_name)
-    f1 = f1_score(y_test, y_res)
+    f1 = f1_score(y_test, y_res,)
     print('Average f1: {0:0.2f}'.format(f1))
     return f1
+
 
 if __name__ == "__main__": main()
 
