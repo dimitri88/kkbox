@@ -43,3 +43,21 @@ def getFeatureVecotrs(path,fileName):
     print('Writing member.csv')
     member_data.to_csv('./member_feature_vector.csv', mode='w+')
 
+    song_col = pd.read_csv('../data/songs.csv')
+    song_id_mat = song_col['song_id']
+
+    len_mat = song_col['song_length']
+    len_mode = len_mat % 120000
+    len_norm = (len_mode - len_mode.min()) / (len_mode.max() - len_mode.min())
+
+    genre_id_mat = song_col['genre_ids']
+    #genre_id_mat = genre_id_mat.applymap(int)
+    genre_id_mat = pd.to_numeric(genre_id_mat, errors='coerce')
+    genre_id_norm = (genre_id_mat - genre_id_mat.min()) / (genre_id_mat.max() - genre_id_mat.min())
+
+    song_category = song_col[['language']]
+    song_category = song_category.applymap(str)
+    song_cat_mat = pd.get_dummies(song_category)
+
+    songs_all_frame = pd.concat([song_id_mat, len_norm, genre_id_norm, song_cat_mat], axis=1)
+    songs_all_frame.to_csv('test.csv', index=False)
