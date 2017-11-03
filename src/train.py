@@ -46,10 +46,10 @@ def main():
         y_res = sgd_clf.predict(x_test)
         f1_sgd.append(compute_f1(y_test, (y_res > 0.5).astype(int), 'Stochastic Gradient Descent'))
 
-    avg_linear = sum(f1_linear_reg)/5.0
-    avg_rf = sum(f1_rf)/5.0
-    avg_sgd = sum(f1_sgd)/5.0
-    avg_tree = sum(f1_tree)/5.0
+    avg_linear = sum(f1_linear_reg)/4.0
+    avg_rf = sum(f1_rf)/4.0
+    avg_sgd = sum(f1_sgd)/4.0
+    avg_tree = sum(f1_tree)/4.0
     print('The average f1 score for linear regression is : %f' % avg_linear)
     print('The average f1 score for random forest is : %f' % avg_rf)
     print('The average f1 score for sgd is : %f' % avg_sgd)

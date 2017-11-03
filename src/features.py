@@ -53,15 +53,18 @@ def getFeatureVecotrs(path,fileName):
     genre_id_mat = song_col['genre_ids']
     #genre_id_mat = genre_id_mat.applymap(int)
     genre_id_mat = pd.to_numeric(genre_id_mat, errors='coerce')
+    genre_id_mat.replace(np.inf, genre_id_mat.mean())
+    genre_id_mat.fillna(genre_id_mat.mean())
     genre_id_norm = (genre_id_mat - genre_id_mat.min()) / (genre_id_mat.max() - genre_id_mat.min())
 
     song_category = song_col[['language']]
     song_category = song_category.applymap(str)
     song_cat_mat = pd.get_dummies(song_category)
     #Linzuo: commented genre_id
-    #songs_all_frame = pd.concat([song_id_mat, len_norm, genre_id_norm, song_cat_mat], axis=1)
-    songs_all_frame = pd.concat([song_id_mat, len_norm, song_cat_mat], axis=1)
-    # songs_all_frame.to_csv('test.csv', index=False)
+    #Steven: commented back after revising genre_id
+    songs_all_frame = pd.concat([song_id_mat, len_norm, genre_id_norm, song_cat_mat], axis=1)
+    #songs_all_frame = pd.concat([song_id_mat, len_norm, song_cat_mat], axis=1)
+    #songs_all_frame.to_csv('test.csv', index=False)
     train_data = pd.merge(train_data, member_data, on='msno', how='left')
     train_data = pd.merge(train_data, songs_all_frame, on='song_id', how='left')
     train_data = train_data.fillna(0)
