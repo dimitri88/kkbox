@@ -9,10 +9,11 @@ from features import getFeatureVecotrs
 def main():
     print('##############Create feature vectors based on training data##############')
     #cross validation to findout best machine learning algorithm
-    train_data = pd.read_csv('../data/train.csv')
-    x = getFeatureVecotrs('../data/', 'train.csv')
-    y = train_data['target'].as_matrix()
-    kf = KFold(n_splits=5)
+    train_data = getFeatureVecotrs('../data/', 'train.csv')
+    y = pd.read_csv('../data/train.csv')['target'].as_matrix()
+    x = train_data.drop(['msno', 'song_id'], axis=1)
+    x = x.as_matrix()
+    kf = KFold(n_splits=4)
 
     f1_linear_reg = []
     f1_rf = []
@@ -31,7 +32,7 @@ def main():
         rf_clf = RandomForestClassifier(max_depth=2, random_state=0)
         rf_clf.fit(x_train, y_train)
         y_res = rf_clf.predict(x_test)
-        f1_rf.append(compute_f1(y_test, (y_res > 0.5).astype(int), 'Random Forest'))
+        f1_rf.append(compute_f1(y_test, y_res, 'Random Forest'))
 
         print('##############Training with Decision Tree ##############')
         tree_clf = tree.DecisionTreeClassifier()

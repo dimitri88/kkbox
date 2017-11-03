@@ -62,8 +62,7 @@ def getFeatureVecotrs(path,fileName):
     #songs_all_frame = pd.concat([song_id_mat, len_norm, genre_id_norm, song_cat_mat], axis=1)
     songs_all_frame = pd.concat([song_id_mat, len_norm, song_cat_mat], axis=1)
     # songs_all_frame.to_csv('test.csv', index=False)
-    train_data = pd.merge(train_data, member_data, on='msno')
-    train_data = pd.merge(train_data, songs_all_frame, on='song_id')
-    train_data.fillna(0)
-    res = train_data.drop(['msno', 'song_id'], axis=1)
-    return res.as_matrix()
+    train_data = pd.merge(train_data, member_data, on='msno', how='left')
+    train_data = pd.merge(train_data, songs_all_frame, on='song_id', how='left')
+    train_data = train_data.fillna(0)
+    return train_data
