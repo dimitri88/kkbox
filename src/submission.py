@@ -22,6 +22,6 @@ res = clf.predict_proba(test_data)
 output = pd.read_csv('../data/sample_submission.csv')
 output['target'] = res[:, 1]
 print('##############Writing output##############')
-output.to_csv('out.csv', index=False)
+output.to_csv('out.csv', index=False, mode='w+')
 
 

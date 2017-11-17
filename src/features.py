@@ -68,12 +68,12 @@ def getFeatureVecotrs(path,fileName):
     song_col = song_col[['song_id', 'genre_ids', 'language']]
 
     #songs_all_frame.to_csv('test.csv', index=False)
-    train = pd.merge(train, member_data, on='msno', how='left')
-    train = pd.merge(train, song_col, on='song_id', how='left')
+    train = pd.merge(train, members, on='msno', how='left')
+   # train = pd.merge(train, song_col, on='song_id', how='left')
     # Replicate the rows with multiple genre ids to be multiple rows, each with a single genre id
-    train = train.set_index(train.columns.drop('genre_ids', 1).tolist()) \
-                   .genre_ids.str.split('|', expand=True).stack().reset_index() \
-                   .rename(columns={0: 'genre_ids'}).loc[:, train.columns]
+    # train = train.set_index(train.columns.drop('genre_ids', 1).tolist()) \
+    #                .genre_ids.str.split('|', expand=True).stack().reset_index() \
+    #                .rename(columns={0: 'genre_ids'}).loc[:, train.columns]
 
     train = train.apply(lambda x: x.fillna(x.value_counts().index[0]))
     return train
