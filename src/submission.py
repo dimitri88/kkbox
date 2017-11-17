@@ -7,10 +7,10 @@ print('##############Create feature vectors based on training data##############
 # cross validation to findout best machine learning algorithm
 train_data = getFeatureVecotrs('../data/', 'train.csv')
 y = pd.read_csv('../data/train.csv')['target'].as_matrix()
-x = train_data.drop(['msno', 'song_id',], axis=1)
-x = x.as_matrix()
-#rf_clf = RandomForestClassifier(max_depth=2, random_state=0)
+x = train_data.drop(['msno', 'song_id'], axis=1)
+x = x.as_matrix()domForestClassifier(max_depth=2, random_state=0)
 #clf = linear_model.SGDClassifier(loss="log", penalty="l2")
+#rf_clf = Ran
 clf = tree.DecisionTreeClassifier()
 print('##############Create training data##############')
 clf.fit(x, y)

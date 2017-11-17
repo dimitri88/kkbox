@@ -1,71 +1,73 @@
 import pandas as pd
 import numpy as np
+import datetime
 '''
 Read train.csv file and convert it into a feature vector
 '''
 
 def getFeatureVecotrs(path,fileName):
-    train_data = pd.read_csv(path + fileName)
-    # extract categorical data and construct a one hot encoder using pandas dummy function
-    train_category_data = train_data[['source_system_tab', 'source_type']]
-    train_category_data = pd.get_dummies(train_category_data)
-    #combine IDs with one hot encoded data
-    train_data = pd.concat([train_data[['msno', 'song_id']], train_category_data], axis=1)
-    # # write train_data to csv file
-    # print('Writing train_feature_vector.csv ')
-    # train_data.to_csv('./train_feature_vector.csv', mode='w+')
+    train = pd.read_csv(path + fileName, dtype={'msno': 'category',
+                                                'source_system_tab': 'category',
+                                                'source_screen_name': 'category',
+                                                'source_type': 'category',
+                                                'target': np.uint8,
+                                                'song_id': 'category'})
 
+    song_col = pd.read_csv(path + 'songs.csv',   dtype={'genre_ids': 'category',
+                                                        'language': 'category',
+                                                        'artist_name': 'category',
+                                                        'composer': 'category',
+                                                        'lyricist': 'category',
+                                                        'song_id': 'category'})
+    members = pd.read_csv(path + 'members.csv', dtype={'city': 'category',
+                                                       'bd': np.uint8,
+                                                       'gender': 'category',
+                                                       'registered_via': 'category'})
+    print('...Data preprocessing...')
+    train_category_data = train[['source_system_tab', 'source_type']]
+    train_category_data = pd.get_dummies(train_category_data)
+    train = pd.concat([train[['msno', 'song_id']], train_category_data], axis=1)
     '''
     Read members.csv file and convert it into a feature vector
     'db' has 57% percentage of 0
     'gender' has 53% percentage null value
     '''
 
-    # read members.csv
-    member_data = pd.read_csv(path+'members.csv')
-    # convert date date into pandas date format
-    member_data['registration_init_time'] = pd.to_datetime(member_data['registration_init_time'], format='%Y%m%d')
-    member_data['expiration_date'] = pd.to_datetime(member_data['expiration_date'], format='%Y%m%d')
-    member_data['length'] = member_data['expiration_date'] - member_data['registration_init_time']
+    members['registration_init_time'] = pd.to_datetime(members['registration_init_time'], format='%Y%m%d')
+    members['expiration_date'] = pd.to_datetime(members['expiration_date'], format='%Y%m%d')
+    members['length'] = members['expiration_date'] - members['registration_init_time']
     # convert timedelta object back to int
-    print('Changing length to int')
-    member_data['length'] = (member_data['length'] / np.timedelta64(1, 'D')).astype(int)
+    members['length'] = (members['length'] / np.timedelta64(1, 'D')).astype(int)
+    members['established'] = ((datetime.datetime.now() - members['registration_init_time']) / np.timedelta64(1, 'D')).astype(int)
+    members['established'] = members['established'] // 365
     # get rid of skew data
-    member_data.loc[member_data.length < 0, 'length'] = 0
-    norm_range = member_data['length'].max() - member_data['length'].min()
+    members.loc[members.length < 0, 'length'] = 0
+    norm_range = members['length'].max() - members['length'].min()
     # normalize length to [0,1]
-    print('Normalizing length')
-    member_data['length'] = (member_data['length'] - member_data['length'].min()) / norm_range
-    member_data[['city', 'registered_via']] = member_data[['city', 'registered_via']].applymap(str)
-    member_category_data = pd.get_dummies(member_data[['city', 'registered_via']])
+    members['length'] = (members['length'] - members['length'].min()) / norm_range
+    members[['city', 'registered_via']] = members[['city', 'registered_via']].applymap(str)
+    member_category_data = pd.get_dummies(members[['city', 'registered_via']])
+    member_data = pd.concat([members['msno'], member_category_data, members[['length', 'established']]], axis=1)
 
-    member_data = pd.concat([member_data['msno'], member_category_data, member_data['length']], axis=1)
-    # print('Writing member.csv')
-    # member_data.to_csv('./member_feature_vector.csv', mode='w+')
-
-    song_col = pd.read_csv('../data/songs.csv')
-    song_id_mat = song_col['song_id']
+    #song_id_mat = song_col['song_id']
 
     len_mat = song_col['song_length']
-    len_mode = len_mat % 120000
-    len_norm = (len_mode - len_mode.min()) / (len_mode.max() - len_mode.min())
+    len_mode = (len_mat / 60000).astype(int)
+    len_norm = len_mode
 
-    genre_id_mat = song_col['genre_ids']
-    #genre_id_mat = genre_id_mat.applymap(int)
-    genre_id_mat = pd.to_numeric(genre_id_mat, errors='coerce')
-    genre_id_mat.replace(np.inf, genre_id_mat.mean())
-    genre_id_mat.fillna(genre_id_mat.mean())
-    genre_id_norm = (genre_id_mat - genre_id_mat.min()) / (genre_id_mat.max() - genre_id_mat.min())
+    #genre_id_mat.replace(np.inf, genre_id_mat.mode())
+    #genre_id_mat.fillna(genre_id_mat.mode())
+    # Assign the genre of the music with multiple genres to be its 1st one
+    song_col['genre_ids'] = song_col['genre_ids'].apply(lambda genre: str(genre).split('|')[0])
 
-    song_category = song_col[['language']]
-    song_category = song_category.applymap(str)
-    song_cat_mat = pd.get_dummies(song_category)
     #Linzuo: commented genre_id
     #Steven: commented back after revising genre_id
-    songs_all_frame = pd.concat([song_id_mat, len_norm, genre_id_norm, song_cat_mat], axis=1)
-    #songs_all_frame = pd.concat([song_id_mat, len_norm, song_cat_mat], axis=1)
+    #songs_all_frame = pd.concat([song_id_mat, len_norm, genre_id_norm, song_cat_mat], axis=1)
+
+    song_col = song_col[['song_id', 'genre_ids', 'language']]
+
     #songs_all_frame.to_csv('test.csv', index=False)
-    train_data = pd.merge(train_data, member_data, on='msno', how='left')
-    train_data = pd.merge(train_data, songs_all_frame, on='song_id', how='left')
-    train_data = train_data.fillna(0)
-    return train_data
+    train = pd.merge(train, member_data, on='msno', how='left')
+    train = pd.merge(train, song_col, on='song_id', how='left')
+    train = train.apply(lambda x: x.fillna(x.value_counts().index[0]))
+    return train
