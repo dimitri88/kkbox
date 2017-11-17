@@ -61,7 +61,7 @@ def main():
 def aucScore(y_test, y_res, model_name):
     print('The auc score for' + model_name)
     roc_acu = roc_auc_score(y_test, y_res[:, 1])
-    print('Average auc score: {0:0.2f}'.format(roc_acu))
+    print('Average auc score: {0:0.4f}'.format(roc_acu))
     return roc_acu
 
 

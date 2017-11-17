@@ -44,11 +44,12 @@ def getFeatureVecotrs(path,fileName):
     members.loc[members.length < 0, 'length'] = 0
     norm_range = members['length'].max() - members['length'].min()
     # normalize length to [0,1]
-    members['length'] = (members['length'] - members['length'].min()) / norm_range
-    members[['city', 'registered_via']] = members[['city', 'registered_via']].applymap(str)
-    member_category_data = pd.get_dummies(members[['city', 'registered_via']])
-    member_data = pd.concat([members['msno'], member_category_data, members[['length', 'established']]], axis=1)
-
+    #members['length'] = (members['length'] - members['length'].min()) / norm_range
+    mean_age = members['bd'].mean()
+    members.loc[members.bd == 0, 'bd'] = mean_age
+    members['bd'] = members['bd']
+    members = members[['msno', 'city', 'registered_via', 'length', 'bd']]
+    #members = members.drop(['registration_init_time', 'bd', 'gender'], axis=1)
     #song_id_mat = song_col['song_id']
 
     len_mat = song_col['song_length']
@@ -58,8 +59,8 @@ def getFeatureVecotrs(path,fileName):
     #genre_id_mat.replace(np.inf, genre_id_mat.mode())
     #genre_id_mat.fillna(genre_id_mat.mode())
     # Assign the genre of the music with multiple genres to be its 1st one
-    #song_col['genre_ids'] = song_col['genre_ids'].apply(lambda genre: str(genre).split('|')[0])
-
+    song_col['genre_ids'] = song_col['genre_ids'].apply(lambda genre: str(genre).split('|')[0])
+    song_col['language'] = song_col['language'].apply(lambda language: 1 if float(language) == 52.0 or float(language) == -1.0 else 0).astype(np.int8)
     #Linzuo: commented genre_id
     #Steven: commented back after revising genre_id
     #songs_all_frame = pd.concat([song_id_mat, len_norm, genre_id_norm, song_cat_mat], axis=1)
