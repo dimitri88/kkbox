@@ -58,7 +58,7 @@ def getFeatureVecotrs(path,fileName):
     #genre_id_mat.replace(np.inf, genre_id_mat.mode())
     #genre_id_mat.fillna(genre_id_mat.mode())
     # Assign the genre of the music with multiple genres to be its 1st one
-    song_col['genre_ids'] = song_col['genre_ids'].apply(lambda genre: str(genre).split('|')[0])
+    #song_col['genre_ids'] = song_col['genre_ids'].apply(lambda genre: str(genre).split('|')[0])
 
     #Linzuo: commented genre_id
     #Steven: commented back after revising genre_id
@@ -69,5 +69,10 @@ def getFeatureVecotrs(path,fileName):
     #songs_all_frame.to_csv('test.csv', index=False)
     train = pd.merge(train, member_data, on='msno', how='left')
     train = pd.merge(train, song_col, on='song_id', how='left')
+    # Replicate the rows with multiple genre ids to be multiple rows, each with a single genre id
+    train = train.set_index(train.columns.drop('genre_ids', 1).tolist()) \
+                   .genre_ids.str.split('|', expand=True).stack().reset_index() \
+                   .rename(columns={0: 'genre_ids'}).loc[:, train.columns]
+
     train = train.apply(lambda x: x.fillna(x.value_counts().index[0]))
     return train
