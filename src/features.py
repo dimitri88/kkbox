@@ -47,7 +47,6 @@ def getFeatureVecotrs(path,fileName):
     #members['length'] = (members['length'] - members['length'].min()) / norm_range
     mean_age = members['bd'].mean()
     members.loc[members.bd == 0, 'bd'] = mean_age
-    members['bd'] = members['bd']
     members = members[['msno', 'city', 'registered_via', 'length', 'bd']]
     #members = members.drop(['registration_init_time', 'bd', 'gender'], axis=1)
     #song_id_mat = song_col['song_id']
