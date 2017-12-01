@@ -31,7 +31,7 @@ members = pd.read_csv(path + 'members.csv', dtype={'city': 'category',
                                                    'registered_via': 'category'})
 print('...Data preprocessing...')
 # get rid of | in genre id
-songs['genre_ids'] = songs['genre_ids'].apply(lambda genre: str(genre).split('|')[0])
+songs['genre_ids'] = songs['genre_ids'].apply(lambda genre: str(genre).split('|')[0]).astype('category')
 songs['song_length'] = (songs['song_length'] / 60000).astype(int)
 print('Generating members...')
 members['registration_init_time'] = pd.to_datetime(members['registration_init_time'], format='%Y%m%d')
@@ -102,6 +102,7 @@ pred = bst.predict(test_x)
 print('Prediction Done......')
 
 print('##############Writing output##############')
-sub = test['id']
+sub = pd.DataFrame()
+sub['id'] = test['id']
 sub['target'] = pred
 sub.to_csv('out.csv', index=False, mode='w+')
