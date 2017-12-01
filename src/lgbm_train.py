@@ -114,9 +114,10 @@ print('Building data set...')
 train_data = lgb.Dataset(train_x,
                          label=labels,
                          categorical_feature=['source_system_tab', 'source_screen_name', 'source_type', 'language'])
+valid_data = lgb.Dataset(train_x, labels)
 
 print('Training......')
-bst = lgb.train(params, train_data, num_round)
+bst = lgb.train(params, train_data, num_round, valid_sets=valid_data, verbose_eval=5)
 
 print('Predicting......')
 pred = bst.predict(test_x)
