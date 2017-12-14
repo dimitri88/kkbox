@@ -8,3 +8,5 @@
 *.ipynb
 
 src/__pycache__/
+
+*.gz
