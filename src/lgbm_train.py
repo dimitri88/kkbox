@@ -2,8 +2,22 @@ import pandas as pd
 import numpy as np
 import datetime
 import lightgbm as lgb
+import argparse
+import time
 
 path = '../data/'
+start = time.time()
+parser = argparse.ArgumentParser()
+parser.add_argument("--cv", help="Cross Validation Mode",
+                    action="store_true")
+args = parser.parse_args()
+cv = False
+if args.cv:
+    print('###\tCross-Validation Mode')
+    cv = True
+else:
+    print('###\tPrediction Mode')
+
 train = pd.read_csv(path + 'train.csv',  dtype={'msno': 'category',
                                                 'source_system_tab': 'category',
                                                 'source_screen_name': 'category',
@@ -20,7 +34,7 @@ test = pd.read_csv(path + 'test.csv',    dtype={'id': np.uint32,
                                                 'song_id': 'category'})
 
 songs = pd.read_csv(path + 'songs.csv', dtype={'genre_ids': 'category',
-                                               'language': 'category',
+                                               'language': np.float32,
                                                'artist_name': 'category',
                                                'composer': 'category',
                                                'lyricist': 'category',
@@ -152,36 +166,52 @@ def get_features(data, train=True):
     return feature_vectors[featurs], label
 
 params = {
-    'task': 'train',
     'objective': 'binary',
-    'metric': 'auc',
-    'num_leaves': 2**8,
+    'boosting': 'gbdt',
+    'learning_rate': 0.2 ,
+    'verbose': 0,
+    'num_leaves': 108,
+    'bagging_fraction': 0.95,
+    'bagging_freq': 1,
+    'bagging_seed': 1,
+    'feature_fraction': 0.9,
+    'feature_fraction_seed': 1,
+    'max_bin': 256,
     'max_depth': 10,
-    'learning_rate': 0.2,
-    'verbosity': 0
+    'metric' : 'auc',
+    'num_threads': 8,
 }
-num_round = 100
+num_round = 656
 
 train_x, labels = get_features(train, True)
 test_x, empty = get_features(test, train=False)
 train_x = train_x.apply(lambda x: x.fillna(x.value_counts().index[0]))
 test_x = test_x.apply(lambda x: x.fillna(x.value_counts().index[0]))
 print('Building data set...')
-train_data = lgb.Dataset(train_x, 
-                         label=labels,
-                         categorical_feature=['source_system_tab', 'source_screen_name', 'source_type', 'language'])
-valid_data = lgb.Dataset(train_x, labels)
+if cv: 
+    train_data = lgb.Dataset(train_x[:-1475483], 
+                             label=labels[:-1475483],
+                             categorical_feature=['source_system_tab', 'source_screen_name', 'source_type'])
+    valid_data = lgb.Dataset(train_x[-1475483: ], labels[-1475483:])
 
-print('Training......')
-#bst = lgb.train(params, train_data, num_round, valid_sets=valid_data, verbose_eval=5)
-bst = lgb.train(params, train_data, 590, valid_sets=valid_data, verbose_eval=10,) 
+    print('Training Using Validation Set......')
+    bst = lgb.train(params, train_data, 1000, valid_sets=valid_data, verbose_eval=10, early_stopping_rounds=10)
+    print('Cross Validation Finished......')
+else:
+    train_data = lgb.Dataset(train_x, 
+                             label=labels,
+                             categorical_feature=['source_system_tab', 'source_screen_name', 'source_type'])
+    valid_data = lgb.Dataset(train_x, labels)
+    print('Predicting......')
+    bst = lgb.train(params, train_data, num_round, valid_sets=valid_data, verbose_eval=10)
+    pred = bst.predict(test_x)
+    print('Prediction Done......')
+    print('##############Writing output##############')
+    sub = pd.DataFrame()
+    sub['id'] = test['id']
+    sub['target'] = pred
+    #sub.to_csv('out.csv', index=False, mode='w+')
+    sub.to_csv('lgbm_submission.csv.gz', compression = 'gzip', index=False, float_format = '%.5f') 
 
-print('Predicting......')
-pred = bst.predict(test_x)
-print('Prediction Done......')
-print('##############Writing output##############')
-sub = pd.DataFrame()
-sub['id'] = test['id']
-sub['target'] = pred
-#sub.to_csv('out.csv', index=False, mode='w+')
-sub.to_csv('lgbm_submission.csv.gz', compression = 'gzip', index=False, float_format = '%.5f') 
+end = time.time()
+print(str((end - start) / 60), "minutes")
