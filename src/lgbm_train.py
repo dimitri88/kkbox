@@ -4,7 +4,7 @@ import datetime
 import lightgbm as lgb
 import argparse
 import time
-
+import gc
 path = '../data/'
 start = time.time()
 parser = argparse.ArgumentParser()
@@ -77,6 +77,12 @@ def is_featured(x):
         return 1
     return 0
 
+def artist_count(x): 
+    if x == 'no_artist': 
+        return 0 
+    else: 
+        return x.count('and') + x.count(',') + x.count('feat') + x.count('&') 
+
 songs['lyricist'] = songs['lyricist'].cat.add_categories(['no_lyricist'])
 songs['lyricist'].fillna('no_lyricist',inplace=True)
 songs['genre_ids'] = songs['genre_ids'].cat.add_categories(['no_genre_id'])
@@ -92,6 +98,7 @@ songs['genre_ids'] = songs['genre_ids'].apply(lambda genre: str(genre).split('|'
 songs['composer_count'] = songs['composer'].apply(composer_count).astype(np.uint8)
 songs['lyricist_count'] = songs['lyricist'].apply(lyricist_count).astype(np.uint8)
 songs['is_featured'] = songs['artist_name'].apply(is_featured).astype(np.uint8)
+songs['artist_count'] = songs['artist_name'].apply(artist_count).astype(np.int8) 
 print('\t Done')
 
 
@@ -139,11 +146,12 @@ songs_extra.drop(['isrc', 'name'], axis=1, inplace=True)
 
 def get_features(data, train=True):
     """features to used"""
-    featurs = [
+    features = [
         'source_system_tab', 'source_screen_name', 'source_type', 'song_length', 'genre_ids', 'language',
         'city', 'registered_via', 'registration_year', 'registration_month', 'registration_day',
         'expiration_year', 'expiration_month', 'expiration_day', 'song_year', 'membership_length',
-        'bd', 'gender', 'song_id_count', 'genre_id_count', 'artist_name_count', 'num_genre_ids', 'composer_count', 'lyricist_count', 'is_featured'
+        'bd', 'gender', 'song_id_count', 'genre_id_count', 'artist_name_count', 'num_genre_ids', 'composer_count', 'lyricist_count', 'is_featured',
+        'artist_count', 'genre_song_count'
     ]
     label = []
     feature_vectors = pd.DataFrame()
@@ -161,9 +169,17 @@ def get_features(data, train=True):
     feature_vectors['genre_id_count'] =feature_vectors['genre_ids'].apply(lambda x: g[x])
     a = feature_vectors['artist_name'].value_counts()
     feature_vectors['artist_name_count'] =feature_vectors['artist_name'].apply(lambda x: a[x])
+    del s
+    del g
+    del a
+    gc.collect()
+    genre_count = feature_vectors.groupby(['msno','genre_ids'])['song_id'].count().to_frame().reset_index();
+    genre_count.columns = ['msno', 'genre_ids', 'genre_song_count']
+    feature_vectors = feature_vectors.merge(genre_count, on=['msno', 'genre_ids'], how='left')
+
     if train:
         label = data['target']
-    return feature_vectors[featurs], label
+    return feature_vectors[features], label
 
 params = {
     'objective': 'binary',
@@ -181,12 +197,15 @@ params = {
     'metric' : 'auc',
     'num_threads': 8,
 }
-num_round = 656
+num_round = 660
 
 train_x, labels = get_features(train, True)
 test_x, empty = get_features(test, train=False)
 train_x = train_x.apply(lambda x: x.fillna(x.value_counts().index[0]))
 test_x = test_x.apply(lambda x: x.fillna(x.value_counts().index[0]))
+del train
+del songs
+gc.collect()
 print('Building data set...')
 if cv: 
     train_data = lgb.Dataset(train_x[:-1475483], 
