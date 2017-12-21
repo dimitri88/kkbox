@@ -30,8 +30,7 @@ test = pd.read_csv(path + 'test.csv',    dtype={'id': np.uint32,
                                                 'msno': 'category',
                                                 'source_system_tab': 'category',
                                                 'source_screen_name': 'category',
-                                                'source_type': 'category',
-                                                'song_id': 'category'})
+                                                'source_type': 'category'})
 
 songs = pd.read_csv(path + 'songs.csv', dtype={'genre_ids': 'category',
                                                'language': np.float32,
@@ -63,14 +62,14 @@ def lyricist_count(x):
     if x == 'no_lyricist':
         return 0
     else:
-        return sum(map(x.count, ['|', '/', '\\', ';'])) + 1
-    return sum(map(x.count, ['|', '/', '\\', ';']))
+        return sum(map(x.count, ['|', '/', '\\', ';', '-', '、', '&', '+'])) + 1
+    #return sum(map(x.count, ['|', '/', '\\', ';']))
 
 def composer_count(x):
     if x == 'no_composer':
         return 0
     else:
-        return sum(map(x.count, ['|', '/', '\\', ';'])) + 1
+        return sum(map(x.count, ['|', '/', '\\', ';', '-', '、', '&', '+'])) + 1
 
 def is_featured(x):
     if 'feat' in str(x) :
@@ -151,7 +150,7 @@ def get_features(data, train=True):
         'city', 'registered_via', 'registration_year', 'registration_month', 'registration_day',
         'expiration_year', 'expiration_month', 'expiration_day', 'song_year', 'membership_length',
         'bd', 'gender', 'song_id_count', 'genre_id_count', 'artist_name_count', 'num_genre_ids', 'composer_count', 'lyricist_count', 'is_featured',
-        'artist_count', 'genre_song_count'
+        'artist_count', 'genre_song_count', 'stype|msno'
     ]
     label = []
     feature_vectors = pd.DataFrame()
@@ -176,6 +175,18 @@ def get_features(data, train=True):
     genre_count = feature_vectors.groupby(['msno','genre_ids'])['song_id'].count().to_frame().reset_index();
     genre_count.columns = ['msno', 'genre_ids', 'genre_song_count']
     feature_vectors = feature_vectors.merge(genre_count, on=['msno', 'genre_ids'], how='left')
+    del genre_count
+
+    stype_msno = feature_vectors.groupby(['msno', 'source_type'])['source_type'].count()
+    stype_msno = stype_msno.rename(columns={'source_type': 'type_count'}).to_frame().reset_index()
+    stype_msno.columns = ['msno', 'source_type', 'type_count']
+    msno_ctr = feature_vectors['msno'].value_counts()
+    stype_msno['msno_count'] = stype_msno['msno'].apply(lambda x: msno_ctr[x])
+    del msno_ctr
+    stype_msno['stype|msno'] = stype_msno['type_count'] / stype_msno['msno_count']
+    stype_msno.drop(['type_count', 'msno_count'], axis=1)
+    feature_vectors = feature_vectors.merge(stype_msno, on=['msno', 'source_type'], how='left')
+    del stype_msno
 
     if train:
         label = data['target']
@@ -197,7 +208,7 @@ params = {
     'metric' : 'auc',
     'num_threads': 8,
 }
-num_round = 660
+num_round = 543
 
 train_x, labels = get_features(train, True)
 test_x, empty = get_features(test, train=False)
