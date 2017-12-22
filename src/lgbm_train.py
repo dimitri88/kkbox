@@ -150,7 +150,7 @@ def get_features(data, train=True):
         'city', 'registered_via', 'registration_year', 'registration_month', 'registration_day',
         'expiration_year', 'expiration_month', 'expiration_day', 'song_year', 'membership_length',
         'bd', 'gender', 'song_id_count', 'genre_id_count', 'artist_name_count', 'num_genre_ids', 'composer_count', 'lyricist_count', 'is_featured',
-        'artist_count', 'genre_song_count', 'stype|msno'
+        'artist_count', 'genre_song_count', 'stype|msno', 'ssname|msno', 'sstab|msno', 'stype|sid'
     ]
     label = []
     feature_vectors = pd.DataFrame()
@@ -182,11 +182,38 @@ def get_features(data, train=True):
     stype_msno.columns = ['msno', 'source_type', 'type_count']
     msno_ctr = feature_vectors['msno'].value_counts()
     stype_msno['msno_count'] = stype_msno['msno'].apply(lambda x: msno_ctr[x])
-    del msno_ctr
     stype_msno['stype|msno'] = stype_msno['type_count'] / stype_msno['msno_count']
     stype_msno.drop(['type_count', 'msno_count'], axis=1)
     feature_vectors = feature_vectors.merge(stype_msno, on=['msno', 'source_type'], how='left')
     del stype_msno
+    ssname_msno = feature_vectors.groupby(['msno', 'source_screen_name'])['source_screen_name'].count()
+    ssname_msno = ssname_msno.rename(columns={'source_screen_name': 'name_count'}).to_frame().reset_index()
+    ssname_msno.columns = ['msno', 'source_screen_name', 'name_count']
+    ssname_msno['msno_count'] = ssname_msno['msno'].apply(lambda x: msno_ctr[x])
+    ssname_msno['ssname|msno'] = ssname_msno['name_count'] / ssname_msno['msno_count']
+    ssname_msno.drop(['name_count', 'msno_count'], axis=1)
+    feature_vectors = feature_vectors.merge(ssname_msno, on=['msno', 'source_screen_name'], how='left')
+    del ssname_msno
+    sstab_msno = feature_vectors.groupby(['msno', 'source_system_tab'])['source_system_tab'].count()
+    sstab_msno = sstab_msno.rename(columns={'source_system_tab': 'tab_count'}).to_frame().reset_index()
+    sstab_msno.columns = ['msno', 'source_system_tab', 'tab_count']
+    sstab_msno['msno_count'] = sstab_msno['msno'].apply(lambda x: msno_ctr[x])
+    del msno_ctr
+    sstab_msno['sstab|msno'] = sstab_msno['tab_count'] / sstab_msno['msno_count']
+    sstab_msno.drop(['tab_count', 'msno_count'], axis=1)
+    feature_vectors = feature_vectors.merge(sstab_msno, on=['msno', 'source_system_tab'], how='left')
+    del sstab_msno
+
+    stype_sid = feature_vectors.groupby(['song_id', 'source_type'])['source_type'].count()
+    stype_sid = stype_sid.rename(columns={'source_type': 'type_count'}).to_frame().reset_index()
+    stype_sid.columns = ['song_id', 'source_type', 'type_count']
+    sid_ctr = feature_vectors['song_id'].value_counts()
+    stype_sid['sid_count'] = stype_sid['song_id'].apply(lambda x: sid_ctr[x])
+    del sid_ctr
+    stype_sid['stype|sid'] = stype_sid['type_count'] / stype_sid['sid_count']
+    stype_sid.drop(['type_count', 'sid_count'], axis=1)
+    feature_vectors = feature_vectors.merge(stype_sid, on=['song_id', 'source_type'], how='left')
+    del stype_sid
 
     if train:
         label = data['target']
@@ -208,7 +235,7 @@ params = {
     'metric' : 'auc',
     'num_threads': 8,
 }
-num_round = 543
+num_round = 826
 
 train_x, labels = get_features(train, True)
 test_x, empty = get_features(test, train=False)
